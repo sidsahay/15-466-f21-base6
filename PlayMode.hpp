@@ -119,6 +119,7 @@ struct PlayMode : Mode {
 	const float MAX_COMBAT_TIME = 10.0f;
 	float combat_timer = 0.0f;
 	
+	bool dead = false;
 
 
 };

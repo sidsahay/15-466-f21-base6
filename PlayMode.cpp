@@ -331,7 +331,7 @@ void PlayMode::update(float elapsed) {
 	
 
 	// update my own transform locally
-	if (my_id != 0) {
+	if (my_id != 0 && !dead) {
 
 		if (hitTimer <= 0.0f && blockTimer <= 0.0f && stunTimer <= 0.0f) {
 			//combine inputs into a force:
@@ -457,7 +457,7 @@ void PlayMode::update(float elapsed) {
 			Client_Player myself(
 				my_transform->position, my_transform->rotation, p1_transform->position, p1_transform->rotation,
 				p2_transform->position, p2_transform->rotation, hit_id,
-				IDLE, 0
+				IDLE, 0, 0
 			);
 			std::vector<unsigned char> client_message;
 			myself.convert_to_message(client_message);
@@ -470,7 +470,7 @@ void PlayMode::update(float elapsed) {
 			Client_Player myself(
 				my_transform->position, my_transform->rotation, p1_transform->position, p1_transform->rotation,
 				p2_transform->position, p2_transform->rotation, hit_id,
-				animation_machines[my_id - 1].current_state, animation_machines[my_id - 1].current_frame
+				animation_machines[my_id - 1].current_state, animation_machines[my_id - 1].current_frame, dead ? 1 : 0
 			);
 			std::vector<unsigned char> client_message;
 			myself.convert_to_message(client_message);
@@ -535,7 +535,8 @@ void PlayMode::update(float elapsed) {
 			bool gotHit;
 			AnimationState animState;
 			unsigned int current_frame;
-			client_player.read_from_message(content, id, gotHit, animState, current_frame);
+			uint8_t dead_state;
+			client_player.read_from_message(content, id, gotHit, animState, current_frame, dead_state);
 
 			// damage logic
 			if (id == my_id) {
@@ -561,6 +562,10 @@ void PlayMode::update(float elapsed) {
 						blockTimer = 0.0f;
 						std::cout << "I am damaged!!" << std::endl;
 						Sound::play_3D(*damage_sample, FX_VOL, players_transform[my_id-1]->position, 1.0f);
+						if (health <= 0.0f) {
+							dead = true;
+							std::cerr << "I died\n";
+						}
 					}
 				}
 				hitLastTime = gotHit;	
@@ -603,6 +608,13 @@ void PlayMode::update(float elapsed) {
 
 				if (animState != animation_machines[id-1].current_state) {
 					animation_machines[id-1].set_state(animState);
+				}
+
+				if (dead_state == 1) {
+					players_transform[id-1]->draw = false;
+					portal1_transform[id-1]->draw = false;
+					portal2_transform[id-1]->draw = false;
+					std::cerr << "player " << id << "died\n";
 				}
 			}
 

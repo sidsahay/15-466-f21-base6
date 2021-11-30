@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
 
 		//hit list
 		std::unordered_set<int> hit_list;
+		std::unordered_set<uint8_t> dead_list;
 
 		//process incoming data from clients until a tick has elapsed:
 		while (true) {
@@ -112,8 +113,10 @@ int main(int argc, char **argv) {
 
 					// ----------- handle messages from client ---------- //
 					uint8_t hit_id;
-					player.read_from_message(c, hit_id);
+					uint8_t dead_id;
+					player.read_from_message(c, hit_id, dead_id);
 					hit_list.insert(hit_id);
+					dead_list.insert(dead_id);
 				}
 			}, remain);
 		}
@@ -134,6 +137,12 @@ int main(int argc, char **argv) {
 			}
 			else {
 				player.gotHit = false;
+			}
+			if (dead_list.find(player.id) != dead_list.end()) {
+				player.dead = 1;
+			}
+			else {
+				player.dead = 0;
 			}
 			player.convert_to_message(server_message);
 			// put the info of other players 
