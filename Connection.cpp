@@ -198,7 +198,7 @@ Server::Server(std::string const &port) {
 	{ //use getaddrinfo to look up how to bind to port:
 		struct addrinfo hints;
 		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_UNSPEC;
+		hints.ai_family = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_PASSIVE;
 
@@ -212,12 +212,12 @@ Server::Server(std::string const &port) {
 		//based on example code in the 'man getaddrinfo' man page on OSX:
 		for (struct addrinfo *info = res; info != nullptr; info = info->ai_next) {
 			{ //DEBUG: dump info about this address:
-				std::cout << "\ttrying ";
+				std::cout << "\t ";
 				char ip[INET6_ADDRSTRLEN];
 				if (info->ai_family == AF_INET) {
 					struct sockaddr_in *s = reinterpret_cast< struct sockaddr_in * >(info->ai_addr);
 					inet_ntop(res->ai_family, &s->sin_addr, ip, sizeof(ip));
-					std::cout << ip << ":" << ntohs(s->sin_port);
+					std::cout <<"ip4: "<< ip << ":" << ntohs(s->sin_port);
 				} else if (info->ai_family == AF_INET6) {
 					struct sockaddr_in6 *s = reinterpret_cast< struct sockaddr_in6 * >(info->ai_addr);
 					inet_ntop(res->ai_family, &s->sin6_addr, ip, sizeof(ip));

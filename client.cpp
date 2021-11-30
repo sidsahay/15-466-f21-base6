@@ -19,6 +19,7 @@
 extern "C" { uint32_t GetACP(); }
 #endif
 int main(int argc, char **argv) {
+
 #ifdef _WIN32
 	{ //when compiled on windows, check that code page is forced to utf-8 (makes file loading/saving work right):
 		//see: https://docs.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page
@@ -63,9 +64,9 @@ int main(int argc, char **argv) {
 
 	//create window:
 	SDL_Window *window = SDL_CreateWindow(
-		"gp21 game6: multiplayer", //TODO: remember to set a title for your game!
+		"Portnite", // title for your game
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		1280, 720, //TODO: modify window size if you'd like
+		960, 580, // modify window size if you'd like
 		SDL_WINDOW_OPENGL
 		| SDL_WINDOW_RESIZABLE //uncomment to allow resizing
 		| SDL_WINDOW_ALLOW_HIGHDPI //uncomment for full resolution on high-DPI screens
@@ -160,6 +161,9 @@ int main(int argc, char **argv) {
 						px.a = 0xff;
 					}
 					save_png(filename, glm::uvec2(w,h), data.data(), LowerLeftOrigin);
+				}
+				if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
+					SDL_WarpMouseInWindow(window, window_size.x / 2, window_size.y / 2);
 				}
 			}
 			if (!Mode::current) break;

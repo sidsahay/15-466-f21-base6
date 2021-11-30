@@ -1,13 +1,13 @@
-
 #include "Connection.hpp"
 
 #include "hex_dump.hpp"
-
 #include <chrono>
 #include <stdexcept>
 #include <iostream>
 #include <cassert>
 #include <unordered_map>
+#include "NetworkPlayer.hpp"
+#include <unordered_set>
 
 #ifdef _WIN32
 extern "C" { uint32_t GetACP(); }
@@ -37,35 +37,39 @@ int main(int argc, char **argv) {
 
 	//------------ initialization ------------
 
-	Server server(argv[1]);
+	Server server(argv[1]); 
 
 
 	//------------ main loop ------------
-	constexpr float ServerTick = 1.0f / 10.0f; //TODO: set a server tick that makes sense for your game
+	constexpr float ServerTick = 1.0f / 20.0f; // set a server tick that makes sense for your game
 
 	//server state:
+	bool ping = false;
 
-	//per-client state:
-	struct PlayerInfo {
-		PlayerInfo() {
-			static uint32_t next_player_id = 1;
-			name = "Player" + std::to_string(next_player_id);
-			next_player_id += 1;
-		}
-		std::string name;
-
-		uint32_t left_presses = 0;
-		uint32_t right_presses = 0;
-		uint32_t up_presses = 0;
-		uint32_t down_presses = 0;
-
-		int32_t total = 0;
-
-	};
-	std::unordered_map< Connection *, PlayerInfo > players;
+	// clients' state:
+	std::unordered_map< Connection *,  Server_Player> players;
+	players.reserve(PLAYER_NUM); 
 
 	while (true) {
+
+		// game logic here
+		{
+			static auto prev_play_time = std::chrono::steady_clock::now();
+			auto now = std::chrono::steady_clock::now();
+			if(std::chrono::duration< float >(now-prev_play_time).count() >= 3.0f){
+				prev_play_time = std::chrono::steady_clock::now();
+				ping = true;
+			}
+			else{
+				ping = false;
+			}	
+		}
+
 		static auto next_tick = std::chrono::steady_clock::now() + std::chrono::duration< double >(ServerTick);
+
+		//hit list
+		std::unordered_set<int> hit_list;
+
 		//process incoming data from clients until a tick has elapsed:
 		while (true) {
 			auto now = std::chrono::steady_clock::now();
@@ -77,96 +81,80 @@ int main(int argc, char **argv) {
 			server.poll([&](Connection *c, Connection::Event evt){
 				if (evt == Connection::OnOpen) {
 					//client connected:
-
+					// refuse connection if over size
+					if(players.size() >= PLAYER_NUM){
+						std::cout << "Over Limit\n";
+						//shut down client connection:
+						c->close();
+						return;
+					}
 					//create some player info for them:
-					players.emplace(c, PlayerInfo());
-
-
-				} else if (evt == Connection::OnClose) {
+					players.emplace(c, Server_Player());
+				} 
+				else if (evt == Connection::OnClose) {
 					//client disconnected:
-
+					std::cout << "Closing\n";
 					//remove them from the players list:
 					auto f = players.find(c);
 					assert(f != players.end());
 					players.erase(f);
-
-
-				} else { assert(evt == Connection::OnRecv);
+					// make its id available
+					Server_Player::id_used[f->second.id-1] = false;
+				} 
+				else { assert(evt == Connection::OnRecv);
 					//got data from client:
-					std::cout << "got bytes:\n" << hex_dump(c->recv_buffer); std::cout.flush();
+					//std::cout << "got bytes:\n" << hex_dump(c->recv_buffer); std::cout.flush();
 
 					//look up in players list:
 					auto f = players.find(c);
 					assert(f != players.end());
-					PlayerInfo &player = f->second;
+					Server_Player &player = f->second;
 
-					//handle messages from client:
-					//TODO: update for the sorts of messages your clients send
-					while (c->recv_buffer.size() >= 5) {
-						//expecting five-byte messages 'b' (left count) (right count) (down count) (up count)
-						char type = c->recv_buffer[0];
-						if (type != 'b') {
-							std::cout << " message of non-'b' type received from client!" << std::endl;
-							//shut down client connection:
-							c->close();
-							return;
-						}
-						uint8_t left_count = c->recv_buffer[1];
-						uint8_t right_count = c->recv_buffer[2];
-						uint8_t down_count = c->recv_buffer[3];
-						uint8_t up_count = c->recv_buffer[4];
-
-						player.left_presses += left_count;
-						player.right_presses += right_count;
-						player.down_presses += down_count;
-						player.up_presses += up_count;
-
-						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 5);
-					}
+					// ----------- handle messages from client ---------- //
+					uint8_t hit_id;
+					player.read_from_message(c, hit_id);
+					hit_list.insert(hit_id);
 				}
 			}, remain);
 		}
 
-		//update current game state
-		//TODO: replace with *your* game state update
-		std::string status_message = "";
-		int32_t overall_sum = 0;
-		for (auto &[c, player] : players) {
-			(void)c; //work around "unused variable" warning on whatever version of g++ github actions is running
-			for (; player.left_presses > 0; --player.left_presses) {
-				player.total -= 1;
-			}
-			for (; player.right_presses > 0; --player.right_presses) {
-				player.total += 1;
-			}
-			for (; player.down_presses > 0; --player.down_presses) {
-				player.total -= 10;
-			}
-			for (; player.up_presses > 0; --player.up_presses) {
-				player.total += 10;
-			}
-			if (status_message != "") status_message += " + ";
-			status_message += std::to_string(player.total) + " (" + player.name + ")";
-
-			overall_sum += player.total;
-		}
-		status_message += " = " + std::to_string(overall_sum);
-		//std::cout << status_message << std::endl; //DEBUG
-
-		//send updated game state to all clients
-		//TODO: update for your game state
+		// ----------- send updated game state to all clients -------------- //
 		for (auto &[c, player] : players) {
 			(void)player; //work around "unused variable" warning on whatever g++ github actions uses
-			//send an update starting with 'm', a 24-bit size, and a blob of text:
+			// construct a status message
+			std::vector<unsigned char> server_message;
+
+			// ------- first put public message (same for all player) ------- //
+			server_message.emplace_back((unsigned char)ping);
+
+			// ------- put all players' infos -------- //
+			// put the info of client itself at first
+			if (hit_list.find(player.id) != hit_list.end()) {
+				player.gotHit = true;
+			}
+			else {
+				player.gotHit = false;
+			}
+			player.convert_to_message(server_message);
+			// put the info of other players 
+			for (auto &[c_other, player_other] : players){
+				if (c != c_other){
+					player_other.convert_to_message(server_message);
+				}
+			}
+			//send an update starting with 'm'
 			c->send('m');
-			c->send(uint8_t(status_message.size() >> 16));
-			c->send(uint8_t((status_message.size() >> 8) % 256));
-			c->send(uint8_t(status_message.size() % 256));
-			c->send_buffer.insert(c->send_buffer.end(), status_message.begin(), status_message.end());
+			// send size
+			sizet_as_byte sizet_bytes;
+			sizet_bytes.sizet_value = server_message.size();
+			for (size_t i =0; i < sizeof(size_t); i++){
+				c->send(sizet_bytes.bytes_value[i]);
+			}
+			// send message
+			c->send_buffer.insert(c->send_buffer.end(), server_message.begin(), server_message.end());
 		}
 
 	}
-
 
 	return 0;
 

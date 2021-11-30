@@ -22,10 +22,15 @@
 #include <vector>
 #include <unordered_map>
 
+#include "Skeletal.hpp"
+
+
 struct Scene {
 	struct Transform {
 		//Transform names are useful for debugging and looking up locations in a loaded scene:
 		std::string name;
+
+		bool draw = true;
 
 		//The core function of a transform is to store a transformation in the world:
 		glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -116,17 +121,49 @@ struct Scene {
 		float spot_fov = glm::radians(45.0f); //spot cone fov (in radians)
 	};
 
+	struct Skeletal {
+		//a 'Skeletal' attaches skinned geometry to a transform
+		Skeletal(Transform *transform_);
+		Transform * transform;
+
+		unsigned int program;
+		std::vector<Node> nodes;
+		std::vector<Animation> animations;
+
+		struct AnimatedMesh {
+			// all the rendering garbage
+			unsigned int vao, vbo, norm_vbo, weight_vbo, id_vbo, ebo, elements;
+			std::vector<float> vertices;
+			std::vector<float> normals;
+			std::vector<unsigned int> indices;
+			std::vector<BoneWeight> bone_weights;
+			std::vector<BoneID> bone_ids;
+			std::vector<Bone> bones;
+			std::vector<glm::mat4> bone_transforms;
+			AnimatedMesh(int idx);
+			void update_bone_transforms(const std::vector<Node>& ns);
+		};
+
+		std::vector<AnimatedMesh> meshes;
+
+		void update_nodes(int i);
+	};
+
 	//Scenes, of course, may have many of the above objects:
 	std::list< Transform > transforms;
 	std::list< Drawable > drawables;
+	std::vector< Skeletal > skeletals;
 	std::list< Camera > cameras;
 	std::list< Light > lights;
 
+	// Scene now needs to store the framebuffer as well. Ugly  coupling, but eh
+	unsigned int fbo, color_tex, depth_tex, quad_program, quad_vao;
+
 	//The "draw" function provides a convenient way to pass all the things in a scene to OpenGL:
-	void draw(Camera const &camera) const;
+	void draw(Camera const &camera, uint8_t my_id) const;
 
 	//..sometimes, you want to draw with a custom projection matrix and/or light space:
-	void draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light = glm::mat4x3(1.0f)) const;
+	void draw(uint8_t my_id, glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light = glm::mat4x3(1.0f)) const;
 
 	//add transforms/objects/cameras from a scene file to this scene:
 	// the 'on_drawable' callback gives your code a chance to look up mesh data and make Drawables:

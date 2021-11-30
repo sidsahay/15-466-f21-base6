@@ -14,8 +14,12 @@ dist/game
 dist/game.exe
 dist/client
 dist/client.exe
+dist/client.pdb
+dist/client.ilk
 dist/server
 dist/server.exe
+dist/server.pdb
+dist/server.ilk
 dist/freetype-test*
 scenes/show-meshes*
 scenes/show-scene*
