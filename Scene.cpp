@@ -721,7 +721,7 @@ Scene::Skeletal::AnimatedMesh::AnimatedMesh(int i) {
 	read_chunk(bin, "bone", &bones);
 
 	bone_transforms.clear();
-	for (int i = 0; i < bones.size(); i++) {
+	for (size_t i = 0; i < bones.size(); i++) {
 		bone_transforms.emplace_back();
 	}
 
@@ -779,7 +779,7 @@ Scene::Skeletal::AnimatedMesh::AnimatedMesh(int i) {
 
 void Scene::Skeletal::update_nodes(int frame) {
 	// std::cerr << "update nodes starts\n";
-	for (int i = 0; i < nodes.size(); i++) {
+	for (int i = 0; i < (int)nodes.size(); i++) {
 		assert(i > nodes[i].parent_id);
 		if (i == 0) {
 			nodes[i].overall_transform = nodes[i].transform;
@@ -803,7 +803,7 @@ void Scene::Skeletal::update_nodes(int frame) {
 void Scene::Skeletal::AnimatedMesh::update_bone_transforms(const std::vector<Node>& ns) {
 	// std::cerr << "update bones starts\n";
 	
-	for (int i = 0; i < bones.size(); i++) {
+	for (size_t i = 0; i < bones.size(); i++) {
 		// std::cerr << "updating bone " << i << "\n";
 		bone_transforms[i] = ns[bones[i].node_id].overall_transform * bones[i].inverse_binding;
 	}

@@ -9,10 +9,10 @@
 class CameraController {
 public:
 	CameraController(
-		Scene::Camera* camera_, Scene::Transform* target_, glm::vec3 offset_,
+		Scene::Camera* camera_, Scene::Transform* target_,
 		float bottom_radius_, float middle_radius_, float top_radius_,
 		float bottom_height_, float middle_height_, float top_height_
-	) : camera(camera_), target(target_), offset(offset_),
+	) : camera(camera_), target(target_),
 		bottom_radius(bottom_radius_), middle_radius(middle_radius_), top_radius(top_radius_),
 		bottom_height(bottom_height_), middle_height(middle_height_), top_height(top_height_),
 		horizontal_angle(0.0f), vertical_angle(0.0f)
@@ -29,9 +29,6 @@ public:
 private:
 	Scene::Camera* camera = nullptr;
 	Scene::Transform* target = nullptr;
-
-	[[maybe_unused]]
-	glm::vec3 offset = glm::vec3(0.0f);
 
 	glm::vec3 camera_position;
 	glm::quat camera_rotation;

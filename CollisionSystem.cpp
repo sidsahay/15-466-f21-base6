@@ -1,7 +1,7 @@
 #include "CollisionSystem.hpp"
 
 void CollisionSystem::Collidable::FixOverLap() {
-	for (int i = 0; i < system->elements.size(); i++) {
+	for (size_t i = 0; i < system->elements.size(); i++) {
 		Collidable* other = system->elements[i];
 		if (this == system->elements[i] || !other->parent->draw)
 			continue;
@@ -28,7 +28,7 @@ int CollisionSystem::CheckOverLap(int CollidableID, float attackDegree, float at
 
 	//std::cout << forward.x << " " << forward.y << " " << forward.z << std::endl;
 	
-	for (int i = 0; i < elements.size(); i++) {
+	for (size_t i = 0; i < elements.size(); i++) {
 		//get the other collider
 		Collidable* other = elements[i];
 
@@ -54,7 +54,7 @@ int CollisionSystem::CheckOverLap(int CollidableID, float attackDegree, float at
 
 		if (distance < minDistance) {
 			minDistance = distance;
-			target = i + 1;
+			target = (int)i + 1;
 		}
 
 		//std::cout << diff_vec.x << " " << diff_vec.y << " " << diff_vec.z << std::endl;

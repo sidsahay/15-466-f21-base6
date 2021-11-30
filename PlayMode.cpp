@@ -78,7 +78,7 @@ Load< Sound::Sample > step_sample(LoadTagDefault, []() -> Sound::Sample const * 
 
 
 PlayMode::PlayMode(Client &client_) : scene(*stage_scene), client(client_) {
-	for (int i = 0; i < PLAYER_NUM; i++) {
+	for (size_t i = 0; i < PLAYER_NUM; i++) {
 		animation_machines.emplace_back();
 	}
 
@@ -103,7 +103,7 @@ PlayMode::PlayMode(Client &client_) : scene(*stage_scene), client(client_) {
 	my_camera->near = 0.01f;
 
 	//create camera controller to control the camera
-	cameraController = new CameraController(my_camera, my_transform, glm::vec3(0.0f), 1.5f, 2.5f, 1.5f, 0.0f, 0.5f, 1.2f);
+	cameraController = new CameraController(my_camera, my_transform, 1.5f, 2.5f, 1.5f, 0.0f, 0.5f, 1.2f);
 
 	//create player controller to control the player
 	characterController = new CharacterController(my_transform, my_camera);
@@ -271,7 +271,7 @@ void PlayMode::update(float elapsed) {
 		unsigned times_run_start = animation_machines[0].times[RUN].first;
 		unsigned times_hit_start = animation_machines[0].times[HIT_1].first;
 
-		for (int i = 0; i < PLAYER_NUM; i++) {
+		for (size_t i = 0; i < PLAYER_NUM; i++) {
 			bool play_step = ((animation_machines[i].current_frame - times_run_start) == 5) || ((animation_machines[i].current_frame - times_run_start) == 15);
 			bool play_swing = (animation_machines[i].current_frame - times_hit_start) == 5;
 
