@@ -457,7 +457,7 @@ void PlayMode::update(float elapsed) {
 			Client_Player myself(
 				my_transform->position, my_transform->rotation, p1_transform->position, p1_transform->rotation,
 				p2_transform->position, p2_transform->rotation, hit_id,
-				IDLE, 0, 0
+				IDLE, 0, false
 			);
 			std::vector<unsigned char> client_message;
 			myself.convert_to_message(client_message);
@@ -470,7 +470,7 @@ void PlayMode::update(float elapsed) {
 			Client_Player myself(
 				my_transform->position, my_transform->rotation, p1_transform->position, p1_transform->rotation,
 				p2_transform->position, p2_transform->rotation, hit_id,
-				animation_machines[my_id - 1].current_state, animation_machines[my_id - 1].current_frame, dead ? 1 : 0
+				animation_machines[my_id - 1].current_state, animation_machines[my_id - 1].current_frame, dead 
 			);
 			std::vector<unsigned char> client_message;
 			myself.convert_to_message(client_message);
@@ -533,10 +533,9 @@ void PlayMode::update(float elapsed) {
 			Client_Player client_player;
 			uint8_t id;
 			bool gotHit;
-			AnimationState animState;
-			unsigned int current_frame;
-			uint8_t dead_state;
-			client_player.read_from_message(content, id, gotHit, animState, current_frame, dead_state);
+			client_player.read_from_message(content, id, gotHit);
+			AnimationState animState = client_player.animState;
+			unsigned int current_frame = client_player.curFrame;
 
 			// damage logic
 			if (id == my_id) {
@@ -610,11 +609,11 @@ void PlayMode::update(float elapsed) {
 					animation_machines[id-1].set_state(animState);
 				}
 
-				if (dead_state == 1) {
+				if (client_player.dead ) {
 					players_transform[id-1]->draw = false;
 					portal1_transform[id-1]->draw = false;
 					portal2_transform[id-1]->draw = false;
-					std::cerr << "player " << id << "died\n";
+					//std::cerr << "player " << id << "died\n";
 				}
 			}
 
@@ -654,13 +653,15 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	scene.draw(*my_camera, my_id);
 
-	// text
+	// UI
 	glDisable(GL_DEPTH_TEST);
 	hintFont->draw("Your Are Player " + std::to_string(my_id), 20.0f, 550.0f, glm::vec2(0.2,0.25), glm::vec3(0.2, 0.8f, 0.2f));
-	if(ping)
-		heart->Draw(glm::vec2(190.0f, 530.0f), glm::vec2(30.0f, 30.0f), 0.0f, glm::vec3(1.0f, .8f, .8f));
-	else
-		sword->Draw(glm::vec2(190.0f, 530.0f), glm::vec2(30.0f, 30.0f), 0.0f, glm::vec3(0.8f, .8f, 1.0f));
+	if(dead)
+		messageFont->draw("YOU ARE DEAD" + std::to_string(my_id), 10.0f, 280.0f, glm::vec2(1,1), glm::vec3(1.0f, 0.2f, 0.2f));
+	for(size_t i= 0; i < (size_t) (health/25.0f); i++){
+		heart->Draw(glm::vec2(190.0f + 40.0f * (float)i, 530.0f), glm::vec2(30.0f, 30.0f), 0.0f, glm::vec3(1.0f, .8f, .8f));
+	}
+
 
 	GL_ERRORS();
 	// std::cerr << "Finished draw()\n";

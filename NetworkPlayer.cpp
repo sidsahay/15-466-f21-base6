@@ -1,7 +1,7 @@
 #include "NetworkPlayer.hpp"
 
-size_t Client_Player::Client_Player_mes_size = ( sizeof(glm::vec3) + sizeof(glm::quat) ) * 3 + 1 + 1 + sizeof(unsigned int) + sizeof(uint8_t);
-size_t Server_Player::Server_Player_mes_size = sizeof(uint8_t) + ( sizeof(glm::vec3) + sizeof(glm::quat) ) * 3 + sizeof(bool) + 1 + sizeof(unsigned int) + sizeof(uint8_t);
+size_t Client_Player::Client_Player_mes_size = ( sizeof(glm::vec3) + sizeof(glm::quat) ) * 3 + 1 + 1 + sizeof(unsigned int) + sizeof(bool);
+size_t Server_Player::Server_Player_mes_size = sizeof(uint8_t) + ( sizeof(glm::vec3) + sizeof(glm::quat) ) * 3 + sizeof(bool) + 1 + sizeof(unsigned int) + sizeof(bool);
 std::array<bool, PLAYER_NUM> Server_Player::id_used = {false};
 
 // ------------------------------ client side -------------------------- //
@@ -9,11 +9,11 @@ std::array<bool, PLAYER_NUM> Server_Player::id_used = {false};
 Client_Player::Client_Player(
     glm::vec3 position_, glm::quat rotation_, glm::vec3 portal1_position_, 
     glm::quat portal1_rotation_, glm::vec3 portal2_position_, glm::quat portal2_rotation_, uint8_t hit_id_,
-    AnimationState animState_ , unsigned int curFrame_, uint8_t dead_id_
+    AnimationState animState_ , unsigned int curFrame_, bool dead_
 ):
 position(position_),rotation(rotation_), portal1_position(portal1_position_), portal1_rotation(portal1_rotation_),
 portal2_position(portal2_position_), portal2_rotation(portal2_rotation_), hit_id(hit_id_),
-animState(animState_), curFrame(curFrame_), dead_id(dead_id_)
+animState(animState_), curFrame(curFrame_), dead(dead_)
 {};
 
 void Client_Player::convert_to_message(std::vector<unsigned char> & client_message){
@@ -66,15 +66,14 @@ void Client_Player::convert_to_message(std::vector<unsigned char> & client_messa
     for (size_t i =0; i < sizeof(unsigned int); i++){
         client_message.emplace_back(curFrame_bytes.bytes_value[i]);
     }
-
-    client_message.emplace_back(dead_id);
+    // dead
+    client_message.emplace_back((unsigned char)dead);
 
     // -----------
     assert(client_message.size() == Client_Player_mes_size);
 }
 
-void Client_Player::read_from_message(const std::vector<unsigned char> & server_message, uint8_t & id, bool & gotHit, 
-    AnimationState & animState_read, unsigned int & curFrame_read, uint8_t & dead_read)
+void Client_Player::read_from_message(const std::vector<unsigned char> & server_message, uint8_t & id, bool & gotHit)
 {
     assert(server_message.size() == Server_Player::Server_Player_mes_size);
     // id
@@ -126,18 +125,18 @@ void Client_Player::read_from_message(const std::vector<unsigned char> & server_
     gotHit = (bool) server_message[index];
     index += sizeof(bool);
     // anim state
-    animState_read = (AnimationState) server_message[index];
+    animState = (AnimationState) server_message[index];
     index += 1;
     // cur frame
     unsignedInt_as_byte curFrame_bytes;
     for (size_t j =0; j < sizeof(unsigned int); j++){
         curFrame_bytes.bytes_value[j] = server_message[j + index];
     }
-    curFrame_read = curFrame_bytes.unsignedInt_value;
+    curFrame = curFrame_bytes.unsignedInt_value;
     index += sizeof(unsigned int);
-
-    dead_read = server_message[index];
-    index += sizeof(uint8_t);
+    // dead
+    dead = (bool) server_message[index];
+    index += sizeof(bool);
 
 }
 
@@ -211,13 +210,13 @@ void Server_Player::convert_to_message(std::vector<unsigned char> & server_messa
     for (size_t i =0; i < sizeof(unsigned int); i++){
         server_message.emplace_back(curFrame_bytes.bytes_value[i]);
     }
-
-    server_message.emplace_back(dead);
+    // dead
+    server_message.emplace_back((unsigned char)dead);
 
     assert(server_message.size() - before == Server_Player_mes_size);
 }
 
-void Server_Player::read_from_message(Connection * c, uint8_t & hit_id, uint8_t & dead_id){
+void Server_Player::read_from_message(Connection * c, uint8_t & hit_id){
     size_t client_mes_size = Client_Player::Client_Player_mes_size;
     while (c->recv_buffer.size() >= client_mes_size) {
         size_t index = 0;
@@ -285,9 +284,9 @@ void Server_Player::read_from_message(Connection * c, uint8_t & hit_id, uint8_t 
         }
         curFrame = curFrame_mes.unsignedInt_value;
         index += sizeof(unsigned int);
-
-        dead_id = c->recv_buffer[index];
-        index += sizeof(uint8_t);
+        // dead
+        dead = (bool) c->recv_buffer[index];
+        index += sizeof(bool);
         
         // erase bytes (remeber +1 for the 'b')
         c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + client_mes_size + 1);

@@ -32,20 +32,19 @@ public:
     uint8_t hit_id; // who I hit (0 means hit no one)
     AnimationState animState;
     unsigned int curFrame;
-    uint8_t dead_id;
+    bool dead = false;
 
     Client_Player(){};
     Client_Player(
         glm::vec3 position_, glm::quat rotation_, glm::vec3 portal1_position_, 
         glm::quat portal1_rotation_, glm::vec3 portal2_position_, glm::quat ortal2_rotation_, uint8_t hit_id_,
-        AnimationState animState_ , unsigned int curFrame_, uint8_t dead_id_
+        AnimationState animState_ , unsigned int curFrame_, bool dead_
     );
     // convert client side player's info into bytes (and send this to server)
     void convert_to_message(std::vector<unsigned char> & client_message);
     // read the message sent by the server, and put it in the client side player obj
     void read_from_message(
-        const std::vector<unsigned char> & server_message, uint8_t & id, bool & gotHit, 
-        AnimationState & animState_read, unsigned int & curFrame_read, uint8_t & dead
+        const std::vector<unsigned char> & server_message, uint8_t & id, bool & gotHit
     );
 
     static size_t Client_Player_mes_size;
@@ -66,13 +65,13 @@ public:
     bool gotHit; // was hit by someone
     AnimationState animState;
     unsigned int curFrame;
-    uint8_t dead = 0;
+    bool dead = false;
 
     Server_Player();
     // convert server side player's info into bytes (and send this to client)
     void convert_to_message(std::vector<unsigned char> & server_message);
     // read the message sent by the client, and put it in the server side player obj
-    void read_from_message(Connection * c, uint8_t & hit_id, uint8_t & dead_id);
+    void read_from_message(Connection * c, uint8_t & hit_id);
 
     static size_t Server_Player_mes_size;
     static std::array<bool, PLAYER_NUM> id_used;
