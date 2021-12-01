@@ -535,7 +535,7 @@ void PlayMode::update(float elapsed) {
 			bool gotHit;
 			client_player.read_from_message(content, id, gotHit);
 			AnimationState animState = client_player.animState;
-			unsigned int current_frame = client_player.curFrame;
+			//unsigned int current_frame = client_player.curFrame;
 
 			// damage logic
 			if (id == my_id) {
